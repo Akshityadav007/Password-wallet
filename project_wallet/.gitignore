@@ -1,7 +1,30 @@
 # =====================================
+# Miscellaneous
+# =====================================
+*.class
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# =====================================
+# IntelliJ / VS Code
+# =====================================
+*.iml
+*.ipr
+*.iws
+.idea/
+.vscode/
+
+# =====================================
 # Flutter / Dart
 # =====================================
-*.dart_tool/
 .dart_tool/
 .packages
 .flutter-plugins
@@ -9,7 +32,10 @@
 .pub-cache/
 .pub/
 build/
+coverage/
 generated_plugin_registrant.dart
+**/doc/api/
+**/ios/Flutter/.last_build_id
 
 # =====================================
 # iOS / Android builds
@@ -27,6 +53,9 @@ android/app/build/
 android/local.properties
 android/key.properties
 android/gradle.properties
+/android/app/debug
+/android/app/profile
+/android/app/release
 
 # =====================================
 # Environment / Secrets
@@ -54,10 +83,9 @@ android/gradle.properties
 *.tar.gz
 
 # =====================================
-# OS / IDE / Editor junk
+# OS Junk Files
 # =====================================
 # macOS
-.DS_Store
 .AppleDouble
 .LSOverride
 
@@ -69,11 +97,6 @@ Desktop.ini
 # Linux
 *~
 
-# JetBrains / VSCode
-.idea/
-.vscode/
-*.iml
-
 # =====================================
 # Logs and crash reports
 # =====================================
@@ -83,13 +106,16 @@ Desktop.ini
 # =====================================
 # Misc
 # =====================================
-# Firebase, if added later
+# Firebase (if added later)
 google-services.json
 GoogleService-Info.plist
 
 # Dart test coverage
-coverage/
 test-results/
+
+# Symbolication / Obfuscation
+app.*.symbols
+app.*.map.json
 
 # =====================================
 # Dependency Injection or Generated code
