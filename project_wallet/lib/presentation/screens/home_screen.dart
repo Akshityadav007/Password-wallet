@@ -1,6 +1,5 @@
 // lib/presentation/screens/home_screen.dart
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -38,6 +37,11 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _initializeVault());
+
+    // Listen for vault refresh requests
+    GetIt.I<SessionService>().vaultNeedsRefresh.addListener(() async {
+      if (mounted) await _loadPasswords();
+    });
   }
 
   // -------------------------
@@ -69,7 +73,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // Load + organize entries
   // -------------------------
   Future<void> _loadPasswords() async {
-    final all = await _passwordRepo.all();
+    final all = await _passwordRepo.getAll();
     if (!mounted) return;
 
     // Build children map (clear existing and rebuild)
@@ -159,7 +163,7 @@ final result = await showDialog<bool>(
               labelText: 'Title',
               prefixIcon: const Icon(Icons.title_outlined),
               filled: true,
-              fillColor: colorScheme.surfaceVariant.withValues(alpha: isDark ? 0.15 : 0.08),
+              fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: isDark ? 0.15 : 0.08),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
@@ -173,7 +177,7 @@ final result = await showDialog<bool>(
               labelText: 'Username / Email',
               prefixIcon: const Icon(Icons.person_outline),
               filled: true,
-              fillColor: colorScheme.surfaceVariant.withValues(alpha: isDark ? 0.15 : 0.08),
+              fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: isDark ? 0.15 : 0.08),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
@@ -188,7 +192,7 @@ final result = await showDialog<bool>(
               labelText: 'Password',
               prefixIcon: const Icon(Icons.lock_outline),
               filled: true,
-              fillColor: colorScheme.surfaceVariant.withValues(alpha: isDark ? 0.15 : 0.08),
+              fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: isDark ? 0.15 : 0.08),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
@@ -231,6 +235,7 @@ final result = await showDialog<bool>(
       final plainPassword = passController.text;
 
       if (title.isEmpty || plainPassword.isEmpty) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Title and password are required')));
         return;
       }
@@ -301,6 +306,7 @@ final result = await showDialog<bool>(
     if (confirmed != true) return;
 
     final nameCtrl = TextEditingController(text: entry.title);
+    if (!mounted) return;
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -316,7 +322,8 @@ final result = await showDialog<bool>(
 
     final folderName = nameCtrl.text.trim();
 
-    // Busy indicator
+    // Busy 
+    if (!mounted) return;
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -382,7 +389,7 @@ Future<void> _revealPassword(BuildContext context, PasswordEntry entry) async {
     bool showPassword = false;
 
     await showDialog(
-      context: context,
+      context: mounted ? context: throw Exception('Context not mounted'),
       builder: (ctx) {
         final theme = Theme.of(ctx);
         final colorScheme = theme.colorScheme;
@@ -538,6 +545,7 @@ Future<void> _revealPassword(BuildContext context, PasswordEntry entry) async {
       },
     );
   } catch (_) {
+    // ignore: use_build_context_synchronously
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Failed to decrypt password')),
     );
@@ -710,7 +718,7 @@ Future<void> _revealPassword(BuildContext context, PasswordEntry entry) async {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: _selectionMode ? Theme.of(context).colorScheme.primaryContainer.withOpacity(0.12) : null,
+        backgroundColor: _selectionMode ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.12) : null,
         title: _selectionMode ? Text('${_selectedIds.length} selected') : const Text('Password Wallet'),
         leading: _selectionMode
             ? IconButton(
@@ -726,12 +734,12 @@ Future<void> _revealPassword(BuildContext context, PasswordEntry entry) async {
     Builder(builder: (ctx) {
       final widgets = <Widget>[];
 
-      // ✅ When exactly ONE item is selected → show contextual actions
+      // When exactly ONE item is selected → show contextual actions
       if (_selectedIds.length == 1) {
         final entry = singleSelectedEntry();
 
         if (entry != null) {
-          // ✏️ Edit button — always visible for single selection
+          // Edit button — always visible for single selection
           widgets.add(
             IconButton(
               icon: const Icon(Icons.edit),
@@ -740,7 +748,7 @@ Future<void> _revealPassword(BuildContext context, PasswordEntry entry) async {
             ),
           );
 
-          // ➕ Add New Item — visible only when a FOLDER is selected
+          // Add New Item — visible only when a FOLDER is selected
           if (entry.isFolder) {
             widgets.add(
               IconButton(
@@ -751,7 +759,7 @@ Future<void> _revealPassword(BuildContext context, PasswordEntry entry) async {
             );
           }
 
-          // 📁 Convert to Folder — visible only for entries (not inside folders)
+          // Convert to Folder — visible only for entries (not inside folders)
 else {
   final isInsideFolder = entry.parentId != null;
   widgets.add(
@@ -768,7 +776,7 @@ else {
         }
       }
 
-      // 🗑 Delete button — always visible in selection mode
+      // Delete button — always visible in selection mode
       widgets.add(
         IconButton(
           icon: const Icon(Icons.delete),

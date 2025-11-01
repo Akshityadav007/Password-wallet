@@ -41,22 +41,32 @@ class PasswordEntry {
         ciphertext: ciphertext ?? this.ciphertext,
         nonce: nonce ?? this.nonce,
         createdAt: createdAt ?? this.createdAt,
-        parentId: parentId,
+        parentId: parentId ?? this.parentId,
         isFolder: isFolder ?? this.isFolder,
         pinned: pinned ?? this.pinned,
       );
 
-  factory PasswordEntry.fromMap(Map<String, dynamic> m) => PasswordEntry(
-        id: m['id'] as int?,
-        title: m['title'] as String,
-        username: m['username'] as String,
-        ciphertext: m['ciphertext'] as String,
-        nonce: m['nonce'] as String,
-        createdAt: DateTime.parse(m['created_at'] as String),
-        parentId: m['parent_id'] as int?,
-        isFolder: (m['is_folder'] as int? ?? 0) == 1,
-        pinned: (m['pinned'] as int? ?? 0) == 1,
+    factory PasswordEntry.fromMap(Map<String, dynamic> map) {
+      bool parseBool(dynamic v) {
+        if (v is bool) return v;
+        if (v is int) return v == 1;
+        if (v is String) return v == '1' || v.toLowerCase() == 'true';
+        return false;
+      }
+
+      return PasswordEntry(
+        id: map['id'] as int?,
+        title: map['title'] ?? '',
+        username: map['username'] ?? '',
+        ciphertext: map['ciphertext'] ?? '',
+        nonce: map['nonce'] ?? '',
+        createdAt: DateTime.tryParse(map['created_at'] ?? '') ?? DateTime.now(),
+        parentId: map['parent_id'] is int ? map['parent_id'] : int.tryParse(map['parent_id']?.toString() ?? ''),
+        isFolder: parseBool(map['is_folder']),
+        pinned: parseBool(map['pinned']),
       );
+    }
+
 
   Map<String, dynamic> toMap() => {
         'id': id,

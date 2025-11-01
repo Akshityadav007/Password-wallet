@@ -1,30 +1,34 @@
-import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 
-/// Holds sensitive session data (e.g. decrypted master key)
-/// Exists only in memory — cleared when app restarts or logs out.
+// Holds sensitive session data (e.g. decrypted master key)
+// Exists only in memory — cleared when app restarts or logs out.
+
 class SessionService {
   static final SessionService _instance = SessionService._internal();
   factory SessionService() => _instance;
   SessionService._internal();
 
   Uint8List? _masterKey;
+  final ValueNotifier<bool> vaultNeedsRefresh = ValueNotifier(false);
 
-  /// Save decrypted master key in memory
+  // Save decrypted master key in memory
   void setMasterKey(Uint8List key) {
     _masterKey = Uint8List.fromList(key);
-    print('🔐 Master key stored in session memory.');
   }
 
-  /// Retrieve master key if available
+  // Retrieve master key if available
   Uint8List? get masterKey => _masterKey;
 
-  /// Clear session data (e.g. on logout or lock)
+  // Clear session data (e.g. on logout or lock)
   void clear() {
     _masterKey = null;
-    print('🧹 Session memory cleared.');
   }
 
-  /// Quick helper
+  void notifyVaultUpdated() {
+    vaultNeedsRefresh.value = !vaultNeedsRefresh.value;
+  }
+
+  // Quick helper
   bool get hasActiveSession => _masterKey != null;
 
   

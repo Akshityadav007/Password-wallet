@@ -35,12 +35,9 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _checkBiometricAvailability() async {
     try {
       final enabled = await _authService.isBiometricEnabled();
-      final supported = await _biometricService.canUseBiometrics();
-
-      print('🔍 [DEBUG] Biometric available check → enabled=$enabled, supported=$supported');
+      final supported = await _biometricService.canUseBiometrics();  
       setState(() => _biometricAvailable = enabled && supported);
     } catch (e) {
-      print('⚠️ Error checking biometrics: $e');
       setState(() => _biometricAvailable = false);
     }
   }
@@ -52,7 +49,7 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    // Always check biometrics
+    // check biometrics
     await _checkBiometricAvailability();
 
     // Auto prompt if allowed by LockService
@@ -70,7 +67,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (enabled && supported) {
         final success = await _biometricService.authenticateWithBiometrics(
-          reason: 'Use your fingerprint to unlock vault',
+          reason: 'Use your fingerdebugPrint to unlock vault',
         );
 
         if (success) {
@@ -156,7 +153,13 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.lock_outline, size: 80, color: theme.primaryColor),
+                Icon(
+                  Icons.lock_outline,
+                  size: 80,
+                  color: theme.brightness == Brightness.dark
+                      ? theme.colorScheme.secondary
+                      : theme.colorScheme.primary,
+                ),
                 const SizedBox(height: 20),
                 Text(
                   'Unlock Your Vault',
@@ -224,7 +227,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: theme.colorScheme.primary.withValues(alpha: 0.25),
+                              color: theme.colorScheme.primary.withValues(
+                                alpha: 0.25,
+                              ),
                               blurRadius: 10,
                               offset: const Offset(0, 4),
                             ),
@@ -254,13 +259,17 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 20),
                   GestureDetector(
                     onTap: () {
-                      Navigator.of(context).pushReplacementNamed('/master-password');
+                      Navigator.of(
+                        context,
+                      ).pushReplacementNamed('/master-password');
                     },
                     child: Text(
                       "Create a new vault",
                       style: TextStyle(
                         fontSize: 16,
-                        color: theme.primaryColor,
+                        color: theme.brightness == Brightness.dark
+                            ? theme.colorScheme.secondary
+                            : theme.colorScheme.primary,
                         fontWeight: FontWeight.w600,
                       ),
                     ),

@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:sodium_libs/sodium_libs_sumo.dart';
 import 'package:password_wallet/domain/interfaces/crypto_service.dart';
 
@@ -21,14 +22,20 @@ class CryptoServiceImpl implements CryptoService {
 
     final passwordBytes = Int8List.fromList(utf8.encode(password));
 
+  
+    // Use fixed, cross-device constants
+    const int opsLimit = 3;                  // ~Interactive
+    const int memLimit = 64 * 1024 * 1024;   // 64 MB
+
     // Derive key (returns SecureKey)
     final secureKey = _sodium.crypto.pwhash(
       outLen: outLen,
       password: passwordBytes,
       salt: actualSalt,
-      opsLimit: _sodium.crypto.pwhash.opsLimitInteractive,
-      memLimit: _sodium.crypto.pwhash.memLimitInteractive,
+      opsLimit: opsLimit,
+      memLimit: memLimit,
     );
+
 
     // Extract as Uint8List
     final keyBytes = secureKey.extractBytes();
@@ -44,13 +51,21 @@ class CryptoServiceImpl implements CryptoService {
   }
 
   ///  Encrypts plaintext using SecretBox (XSalsa20-Poly1305)
-  @override
+    @override
   Future<Map<String, Uint8List>> encrypt(
     Uint8List message,
     Uint8List key,
   ) async {
+    if (key.length != _sodium.crypto.secretBox.keyBytes) {
+      throw ArgumentError(
+        'Invalid key length: expected ${_sodium.crypto.secretBox.keyBytes}, got ${key.length}',
+      );
+    }
+
     final nonce = _sodium.randombytes.buf(_sodium.crypto.secretBox.nonceBytes);
-    final secureKey = _sodium.secureCopy(key);
+
+    // Normalize key for current sodium context
+    final secureKey = _sodium.secureCopy(Uint8List.fromList(key));
 
     try {
       final ciphertext = _sodium.crypto.secretBox.easy(
@@ -58,24 +73,31 @@ class CryptoServiceImpl implements CryptoService {
         nonce: nonce,
         key: secureKey,
       );
-
       return {
         'nonce': nonce,
         'ciphertext': ciphertext,
       };
+    } catch (e) {
+      debugPrint('[CryptoService.encrypt] libsodium failed: $e');
+      rethrow;
     } finally {
-      secureKey.dispose(); // securely wipes memory
+      secureKey.dispose();
     }
   }
 
-  /// Decrypts ciphertext using the given nonce + key.
   @override
   Future<Uint8List> decrypt(
     Uint8List ciphertext,
     Uint8List nonce,
     Uint8List key,
   ) async {
-    final secureKey = _sodium.secureCopy(key);
+    if (key.length != _sodium.crypto.secretBox.keyBytes) {
+      throw ArgumentError(
+        'Invalid key length: expected ${_sodium.crypto.secretBox.keyBytes}, got ${key.length}',
+      );
+    }
+
+    final secureKey = _sodium.secureCopy(Uint8List.fromList(key));
 
     try {
       final plain = _sodium.crypto.secretBox.openEasy(
@@ -83,12 +105,15 @@ class CryptoServiceImpl implements CryptoService {
         nonce: nonce,
         key: secureKey,
       );
-
       return Uint8List.fromList(plain);
+    } catch (e) {
+      debugPrint('[CryptoService.decrypt] libsodium failed: $e');
+      rethrow;
     } finally {
       secureKey.dispose();
     }
   }
+
 
 
   // ---------------------------------------------------------------------------

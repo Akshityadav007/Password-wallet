@@ -1,12 +1,12 @@
-import 'dart:typed_data';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:get_it/get_it.dart';
 import 'package:password_wallet/data/sources/local/secure_storage.dart';
+import 'package:password_wallet/domain/interfaces/crypto_service.dart';
 import 'package:password_wallet/services/session_service.dart';
-import '../domain/interfaces/crypto_service.dart';
 import 'biometric_service.dart';
 
-/// Handles master password registration, verification, and biometric unlock.
+// Handles master password registration, verification, and biometric unlock.
 class AuthService {
   final CryptoService crypto;
   final SecureStorage secureStorage;
@@ -24,6 +24,8 @@ class AuthService {
     required this.biometricService,
     required this.secureStorage,
   });
+
+  static String get keySalt => _keySalt;
 
   // ---------------------------------------------------------------------------
   // 🔹 1. Registration — first-time setup
@@ -81,7 +83,6 @@ class AuthService {
     await secureStorage.write(key: _keyBioSalt, value: base64Encode(bioSalt));
     await secureStorage.write(key: _keyBioEnabled, value: 'true');
 
-    print('✅ Biometric unlock enabled and master key stored securely');
   }
 
   Future<bool> isBiometricEnabled() async {
@@ -107,7 +108,6 @@ class AuthService {
     final tokenJson = await secureStorage.read(key: _keyBioToken);
     final saltB64 = await secureStorage.read(key: _keyBioSalt);
     if (tokenJson == null || saltB64 == null) {
-      print('Biometric data missing');
       return null;
     }
 
@@ -120,11 +120,8 @@ class AuthService {
       // Re-derive the same key used during encryption
       final bioKey = await crypto.deriveKeyFromPassword('biometric', outLen: 32, salt: bioSalt);
       final masterKey = await crypto.decrypt(ciphertext, nonce, bioKey);
-
-      print('Biometric decryption succeeded!');
       return masterKey;
     } catch (e) {
-      print('Biometric decryption failed: $e');
       return null;
     }
   }
@@ -140,11 +137,8 @@ class AuthService {
 
   //  logout — clear session but keep biometric data
   Future<void> clearSession() async {
-    // await secureStorage.delete(key: _keyBioToken);
-    // await secureStorage.delete(key: _keyBioSalt);
     final session = GetIt.I<SessionService>();
     session.clear();
-    print('Session cleared (biometric preserved)');
   }
 
   // factory reset
@@ -154,7 +148,6 @@ class AuthService {
     await secureStorage.delete(key: _keyBioToken);
     await secureStorage.delete(key: _keyBioEnabled);
     await secureStorage.delete(key: _keyBioSalt);
-    print('All secure data cleared — full reset');
   }
 
 

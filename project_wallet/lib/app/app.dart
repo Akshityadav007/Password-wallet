@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import 'package:password_wallet/app/routes.dart';
 import 'package:password_wallet/services/lock_service.dart';
-import 'package:provider/provider.dart';
 import 'package:password_wallet/app/theme.dart';
-import 'package:password_wallet/services/theme_service.dart';
 
 
 class MyApp extends StatefulWidget {
@@ -43,7 +41,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    final themeService = Provider.of<ThemeService>(context);
 
     return GestureDetector(
       onTap: _lockService.resetAutoLockTimer, // reset on user activity
@@ -52,9 +49,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         debugShowCheckedModeBanner: false,
         title: 'Password Wallet',
         navigatorKey: navigatorKey,
-        theme: themeService.isDarkMode
-            ? AppTheme.darkTheme
-            : AppTheme.lightTheme,
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: ThemeMode.system,
         routes: appRoutes,
         initialRoute: '/',
       ),

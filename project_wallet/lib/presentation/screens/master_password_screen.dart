@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
+import 'package:password_wallet/presentation/utils/safe_snack.dart';
 import 'package:password_wallet/services/auth_service.dart';
 import 'package:password_wallet/services/biometric_service.dart';
 import 'package:password_wallet/services/session_service.dart';
@@ -23,21 +24,16 @@ class _MasterPasswordScreenState extends State<MasterPasswordScreen> {
   bool _obscure1 = true;
   bool _obscure2 = true;
 
-  void _showSnack(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-  }
-
   Future<void> _onSubmit() async {
     final password = _passwordController.text.trim();
     final confirm = _confirmController.text.trim();
 
     if (password.isEmpty || confirm.isEmpty) {
-      _showSnack('Please fill both fields');
+      safeSnack(context, 'Please fill both fields');
       return;
     }
     if (password != confirm) {
-      _showSnack('Passwords do not match');
+      safeSnack(context, 'Passwords do not match');
       return;
     }
 
@@ -49,17 +45,24 @@ class _MasterPasswordScreenState extends State<MasterPasswordScreen> {
 
       // Derive the key immediately after registration
       final masterKey = await _authService.verifyMasterPassword(password);
-      if (masterKey == null) throw Exception('Key verification failed after registration');
+      if (masterKey == null)
+     {   
+      if (!mounted) return;
+      safeSnack(context, 'Key verification failed after registration');
+      throw Exception('Key verification failed after registration');
+     }
 
       // Store key in active session
       _session.setMasterKey(masterKey);
 
-      _showSnack('Master password set successfully!');
+      if (!mounted) return;
+      safeSnack(context, 'Master password set successfully!');
 
       if (!mounted) return;
       await _showBiometricPrompt(masterKey);
     } catch (e) {
-      _showSnack('Error: ${e.toString()}');
+      if (!mounted) return;
+      safeSnack(context, 'Error: ${e.toString()}');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -73,7 +76,9 @@ class _MasterPasswordScreenState extends State<MasterPasswordScreen> {
       barrierDismissible: false,
       builder: (ctx) {
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           elevation: 10,
           backgroundColor: theme.colorScheme.surface,
           child: Padding(
@@ -124,7 +129,9 @@ class _MasterPasswordScreenState extends State<MasterPasswordScreen> {
                       label: const Text('Enable'),
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 12),
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
@@ -143,13 +150,16 @@ class _MasterPasswordScreenState extends State<MasterPasswordScreen> {
       try {
         final canUse = await _biometricService.canUseBiometrics();
         if (!canUse) {
-          _showSnack('Biometric authentication not supported on this device.');
+          if (!mounted) return;
+          safeSnack(context, 'Biometric authentication not supported on this device.');
         } else {
           await _authService.enableBiometricUnlock(masterKey);
-          _showSnack('Biometric unlock enabled!');
+          if (!mounted) return;
+          safeSnack(context, 'Biometric unlock enabled!');
         }
       } catch (e) {
-        _showSnack('Failed to enable biometrics: $e');
+        if (!mounted) return;
+        safeSnack(context, 'Failed to enable biometrics: $e');
       }
     }
 
@@ -184,7 +194,14 @@ class _MasterPasswordScreenState extends State<MasterPasswordScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.security_rounded, size: 80, color: theme.primaryColor),
+                Icon(
+                  Icons.security_rounded,
+                  size: 80,
+                  color: theme.brightness == Brightness.dark
+                      ? theme.colorScheme.secondary
+                      : theme.colorScheme.primary,
+                ),
+
                 const SizedBox(height: 20),
                 Text(
                   'Set Your Master Password',

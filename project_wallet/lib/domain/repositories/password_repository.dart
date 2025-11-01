@@ -5,11 +5,10 @@ import '../../data/models/password_entry.dart';
 abstract class PasswordRepository {
   // Normal CRUD operations for app use
   Future<int> add(PasswordEntry entry);
-  Future<List<PasswordEntry>> all();
+  Future<List<PasswordEntry>> getAll();
   Future<int> remove(int id);
 
   // Backup/restore-specific operations
-  Future<List<Map<String, dynamic>>> getAllPasswords();
   Future<void> restoreFromJson(List<dynamic> jsonList);
   Future<void> clearAll();
 

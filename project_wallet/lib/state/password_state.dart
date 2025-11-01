@@ -15,7 +15,7 @@ class PasswordState extends ChangeNotifier {
     loading = true;
     notifyListeners();
       try {
-        entries = await repo.all();
+        entries = await repo.getAll();
       } 
       finally {
         loading = false;

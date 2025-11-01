@@ -9,17 +9,36 @@ class PasswordRepositoryImpl implements PasswordRepository {
 
   static const table = 'passwords';
 
-  // ----- CRUD -----
+  // -------------------------------------------------
+  // 🔹 Basic CRUD
+  // -------------------------------------------------
   @override
   Future<int> add(PasswordEntry entry) async {
     await _db.open();
     final map = Map<String, dynamic>.from(entry.toMap());
-    if (map['id'] == null) map.remove('id');
+    map.remove('id'); // let SQLite assign
     return await _db.db.insert(table, map);
   }
 
   @override
-  Future<List<PasswordEntry>> all() async => _db.all();
+  Future<List<PasswordEntry>> getAll() async {
+    await _db.open();
+    final maps = await _db.allAsMaps();
+    return maps.map(PasswordEntry.fromMap).toList();
+  }
+
+  @override
+  Future<void> update(PasswordEntry entry) async {
+    await _db.open();
+    final map = Map<String, dynamic>.from(entry.toMap());
+    map.remove('id');
+    await _db.db.update(
+      table,
+      map,
+      where: 'id = ?',
+      whereArgs: [entry.id],
+    );
+  }
 
   @override
   Future<int> remove(int id) async {
@@ -27,46 +46,59 @@ class PasswordRepositoryImpl implements PasswordRepository {
     return await _db.db.delete(table, where: 'id = ?', whereArgs: [id]);
   }
 
-  // ----- Backup/restore -----
   @override
-  Future<List<Map<String, dynamic>>> getAllPasswords() async => _db.allAsMaps();
+  Future<void> clearAll() async => _db.clearAll();
 
+  // -------------------------------------------------
+  // 🔹 Backup / Restore
+  // -------------------------------------------------
   @override
   Future<void> restoreFromJson(List<dynamic> jsonList) async {
     await _db.open();
     await _db.clearAll();
+
     for (final item in jsonList) {
       final map = Map<String, dynamic>.from(item as Map);
-      // If map contains id but you want to preserve original ids, keep it.
-      // Otherwise remove id to let sqlite assign new ones.
-      // Here we attempt to preserve if present:
+
+      // Normalize key names and ensure valid ints
+      if (map.containsKey('isFolder')) {
+        map['is_folder'] = (map['isFolder'] == true || map['isFolder'] == 1) ? 1 : 0;
+        map.remove('isFolder');
+      } else if (map.containsKey('is_folder')) {
+        map['is_folder'] = (map['is_folder'] == true || map['is_folder'] == 1) ? 1 : 0;
+      }
+
+      if (map.containsKey('parentId')) {
+        map['parent_id'] = map['parentId'];
+        map.remove('parentId');
+      }
+
+      map['is_folder'] = (map['is_folder'] ?? 0).toInt();
+      map['pinned'] = (map['pinned'] ?? 0).toInt();
+
       await _db.insertRaw(map);
     }
   }
 
-  @override
-  Future<void> clearAll() async => _db.clearAll();
-
-  // ---------------------------------------------------------------------------
-  // 🔹 Folder / Group Helpers (FIXED: use snake_case column names)
-  // ---------------------------------------------------------------------------
-
+  // -------------------------------------------------
+  // 🔹 Folder / Group Helpers
+  // -------------------------------------------------
   @override
   Future<List<PasswordEntry>> childrenOf(int folderId) async {
-    final db = _db.db;
-    final rows = await db.query(
+    await _db.open();
+    final rows = await _db.db.query(
       table,
       where: 'parent_id = ?',
       whereArgs: [folderId],
       orderBy: 'created_at DESC',
     );
-    return rows.map((r) => PasswordEntry.fromMap(r)).toList();
+    return rows.map(PasswordEntry.fromMap).toList();
   }
 
   @override
   Future<void> moveToFolder(int entryId, int folderId) async {
-    final db = _db.db;
-    await db.update(
+    await _db.open();
+    await _db.db.update(
       table,
       {'parent_id': folderId},
       where: 'id = ?',
@@ -76,43 +108,19 @@ class PasswordRepositoryImpl implements PasswordRepository {
 
   @override
   Future<int> deleteWithChildren(int folderId) async {
-    final db = _db.db;
-
-    // Find all direct children first
-    final children = await db.query('passwords', where: 'parent_id = ?', whereArgs: [folderId]);
-
+    await _db.open();
+    final children = await _db.db.query(table, where: 'parent_id = ?', whereArgs: [folderId]);
     int totalDeleted = 0;
 
-    // For each child, if it's a folder — delete its children recursively
     for (final child in children) {
       final isFolder = (child['is_folder'] ?? 0) == 1;
       final id = child['id'] as int;
-      if (isFolder) {
-        totalDeleted += await deleteWithChildren(id);
-      } else {
-        totalDeleted += await db.delete('passwords', where: 'id = ?', whereArgs: [id]);
-      }
+      totalDeleted += isFolder
+          ? await deleteWithChildren(id)
+          : await _db.db.delete(table, where: 'id = ?', whereArgs: [id]);
     }
 
-    // Finally, delete the parent folder itself
-    totalDeleted += await db.delete('passwords', where: 'id = ?', whereArgs: [folderId]);
+    totalDeleted += await _db.db.delete(table, where: 'id = ?', whereArgs: [folderId]);
     return totalDeleted;
-  }
-
-
-
-  @override
-  Future<void> update(PasswordEntry entry) async {
-    final db = _db.db;
-    // Use toMap (already uses snake_case)
-    final map = Map<String, dynamic>.from(entry.toMap());
-    // Avoid attempting to set id in the update map (SQLite will ignore but keep map clean)
-    map.remove('id');
-    await db.update(
-      table,
-      map,
-      where: 'id = ?',
-      whereArgs: [entry.id],
-    );
   }
 }

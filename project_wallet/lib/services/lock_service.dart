@@ -145,7 +145,6 @@ class LockService {
 
     _lockTimer = Timer(_lockTimeout, () async {
       await logout(showMessage: true);
-      debugPrint('🔒 Vault auto-logged out after $_lockTimeout of inactivity.');
     });
   }
 

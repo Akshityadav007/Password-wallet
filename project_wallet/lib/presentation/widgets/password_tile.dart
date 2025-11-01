@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:password_wallet/data/models/password_entry.dart';
 import 'package:password_wallet/presentation/utils/icon_mapper.dart';
+import 'package:password_wallet/presentation/utils/safe_snack.dart';
 
 typedef AddToFolderCallback = Future<void> Function(int folderId);
 typedef RevealChildCallback = Future<void> Function(PasswordEntry child);
@@ -54,7 +55,8 @@ class _PasswordTileState extends State<PasswordTile> {
       try {
         await widget.onAddToFolder!(id);
       } catch (e) {
-        debugPrint('⚠️ Failed to open add dialog: $e');
+        if (!mounted) return;
+        safeSnack(context, 'Failed to open add dialog.', isError: true);
       }
     });
   }
@@ -70,7 +72,6 @@ class _PasswordTileState extends State<PasswordTile> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 🟢 Main Folder / Entry Tile
         GestureDetector(
           onTap: widget.onTap,
           onLongPress: widget.onLongPress,
@@ -138,7 +139,7 @@ class _PasswordTileState extends State<PasswordTile> {
           ),
         ),
 
-        // 🟣 Folder Expanded Section
+        // Children list for folders
         if (entry.isFolder && widget.expanded)
           Padding(
             padding:
@@ -227,7 +228,7 @@ class _PasswordTileState extends State<PasswordTile> {
                   ),
                 ),
 
-                // ➕ Floating Add Button (clean + reliable)
+                // Floating Add Button
                 Align(
                   alignment: Alignment.topLeft,
                   child: Transform.translate(

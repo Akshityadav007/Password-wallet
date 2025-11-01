@@ -7,9 +7,9 @@ abstract class BackupService {
   });
 
   Future<int> importEncryptedBackup({
-    required String filePath,
-    String? masterPassword,
-    Uint8List? masterKey,
+  required String filePath,
+  required String oldMasterPassword,
+  required String newMasterPassword,
   });
 
   Future<bool> verifyBackup({
