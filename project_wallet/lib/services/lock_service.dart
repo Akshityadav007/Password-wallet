@@ -29,7 +29,7 @@ class LockService {
   }) async {
     if (timeout != null) _lockTimeout = timeout;
     if (lockOnBackground != null) _lockOnBackground = lockOnBackground;
-    resetAutoLockTimer();
+    // resetAutoLockTimer();
   }
 
   // ---------------------------------------------------------------------------
@@ -77,32 +77,45 @@ class LockService {
     await _authService.clearSession();
   }
 
-  Future<bool> tryBiometricUnlock(BuildContext context) async {
+  bool _biometricInProgress = false;
+
+Future<bool> tryBiometricUnlock(BuildContext context) async {
+  if (_biometricInProgress) {
+    return false;
+  }
+
+  _biometricInProgress = true;
+  try {
     final enabled = await _authService.isBiometricEnabled();
     final supported = await _biometricService.canUseBiometrics();
 
-    if (!enabled || !supported) return false;
+    if (!enabled || !supported) {
+      _biometricInProgress = false;
+      return false;
+    }
 
     final success = await _biometricService.authenticateWithBiometrics(
-      reason: 'Use your fingerprint to unlock vault',
+      reason: 'Authenticate to unlock your vault',
     );
 
-    if (!success) return false;
+    if (success) {
+      final key = await _authService.unlockWithBiometrics();
+      if (key != null) {
+        _session.setMasterKey(key);
+        debugPrint('Biometric unlock successful, setting master key in session.');
+        return true;
+      }
+    }
 
-    final key = await _authService.unlockWithBiometrics();
-    if (key == null) return false;
-
-    if (!context.mounted) return false;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Unlocked via biometrics!')),
-    );
-    return true;
+    return false;
+  } finally {
+    _biometricInProgress = false;
   }
+}
+
+
 
   // ---------------------------------------------------------------------------
-  // 🔹 Logout (used by auto-lock timer or manually)
-  // ---------------------------------------------------------------------------
-    // ---------------------------------------------------------------------------
   // 🔹 Logout (used by auto-lock timer or manually)
   // ---------------------------------------------------------------------------
   Future<void> logout({bool showMessage = false}) async {
@@ -137,16 +150,20 @@ class LockService {
   // ---------------------------------------------------------------------------
   Timer? _lockTimer;
 
-  void resetAutoLockTimer() {
-    _lockTimer?.cancel();
+ // lock_service.dart
 
-    // Skip auto-lock if user set "Never"
-    if (_lockTimeout == Duration.zero) return;
+void resetAutoLockTimer() {
+  _lockTimer?.cancel();
 
-    _lockTimer = Timer(_lockTimeout, () async {
-      await logout(showMessage: true);
-    });
+  if (_lockTimeout == Duration.zero) {
+    return;
   }
+
+  _lockTimer = Timer(_lockTimeout, () async {
+    await logout(showMessage: true);
+  });
+}
+
 
   void cancelAutoLockTimer() {
     _lockTimer?.cancel();

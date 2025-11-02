@@ -48,26 +48,33 @@ class _HomeScreenState extends State<HomeScreen> {
   // Initialization / Vault
   // -------------------------
   Future<void> _initializeVault() async {
-    final session = GetIt.I<SessionService>();
-    if (session.hasActiveSession) {
-      _masterKey = session.masterKey;
-      await _loadPasswords();
-      return;
-    }
+  final session = GetIt.I<SessionService>();
 
-    final password = await _askForMasterPassword(context);
-    if (password == null || password.isEmpty) return;
-
-    final derived = await _authService.verifyMasterPassword(password);
-    if (derived == null) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invalid master password')));
-      return;
-    }
-    _masterKey = derived;
-    session.setMasterKey(derived);
+  // If a key is already in session (biometric or login), use it directly
+  if (session.masterKey != null) {
+    _masterKey = session.masterKey;
     await _loadPasswords();
+    return;
   }
+
+  // Only if no session or key at all, ask for password
+  final password = await _askForMasterPassword(context);
+  if (password == null || password.isEmpty) return;
+
+  final derived = await _authService.verifyMasterPassword(password);
+  if (derived == null) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Invalid master password')),
+    );
+    return;
+  }
+
+  _masterKey = derived;
+  session.setMasterKey(derived);
+  await _loadPasswords();
+}
+
 
   // -------------------------
   // Load + organize entries

@@ -4,7 +4,6 @@ import 'package:password_wallet/app/routes.dart';
 import 'package:password_wallet/services/lock_service.dart';
 import 'package:password_wallet/app/theme.dart';
 
-
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
@@ -19,7 +18,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _lockService.resetAutoLockTimer(); // start the first timer
+    _lockService.resetAutoLockTimer();
   }
 
   @override
@@ -32,18 +31,15 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-
     if (state == AppLifecycleState.resumed) {
-      // Reset timer when app comes back to foreground
       _lockService.resetAutoLockTimer();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-
     return GestureDetector(
-      onTap: _lockService.resetAutoLockTimer, // reset on user activity
+      onTap: _lockService.resetAutoLockTimer,
       onPanDown: (_) => _lockService.resetAutoLockTimer(),
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -58,4 +54,3 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     );
   }
 }
-

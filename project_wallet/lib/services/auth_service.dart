@@ -136,10 +136,11 @@ class AuthService {
   }
 
   //  logout — clear session but keep biometric data
-  Future<void> clearSession() async {
-    final session = GetIt.I<SessionService>();
-    session.clear();
-  }
+Future<void> clearSession() async {
+  final session = GetIt.I<SessionService>();
+  session.clear();
+}
+
 
   // factory reset
   Future<void> clearAll() async {

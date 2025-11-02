@@ -44,6 +44,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _checkFirstTimeUser() async {
     final hasPassword = await _authService.hasMasterPassword();
+
     if (!hasPassword && mounted) {
       Navigator.of(context).pushReplacementNamed('/master-password');
       return;
@@ -75,6 +76,10 @@ class _LoginScreenState extends State<LoginScreen> {
           if (key != null) {
             final session = GetIt.I<SessionService>();
             session.setMasterKey(key);
+
+            final lockService = GetIt.I<LockService>();
+            lockService.resetAutoLockTimer();
+            lockService.disableAutoPrompt(); 
 
             _showSnack('Unlocked via biometrics!');
             if (!mounted) return;

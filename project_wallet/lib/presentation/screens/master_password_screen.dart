@@ -52,6 +52,8 @@ class _MasterPasswordScreenState extends State<MasterPasswordScreen> {
       throw Exception('Key verification failed after registration');
      }
 
+     debugPrint('🗝️🗝️ Master key set: $masterKey');
+
       // Store key in active session
       _session.setMasterKey(masterKey);
 

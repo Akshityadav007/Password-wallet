@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import 'package:password_wallet/services/auth_service.dart';
+import 'package:password_wallet/services/biometric_service.dart';
+import 'package:password_wallet/services/lock_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -27,29 +29,47 @@ class _SplashScreenState extends State<SplashScreen>
     setState(() => _opacity = 1.0);
   }
 
-  Future<void> _initApp() async {
-    await Future.delayed(const Duration(milliseconds: 800));
+Future<void> _initApp() async {
+  await Future.delayed(const Duration(milliseconds: 800));
 
-    final hasPassword = await _authService.hasMasterPassword();
+  final authService = _authService;
+  final biometricService = GetIt.I<BiometricService>();
+  final lockService = GetIt.I<LockService>();
+
+  final hasPassword = await authService.hasMasterPassword();
+  if (!mounted) return;
+
+  if (!hasPassword) {
+    Navigator.of(context)
+        .pushNamedAndRemoveUntil('/master-password', (route) => false);
+    return;
+  }
+
+  // Ensure services are ready
+  final supported = await biometricService.canUseBiometrics();
+  final enabled = await authService.isBiometricEnabled();
+
+  if (enabled && supported) {
     if (!mounted) return;
+    final success = await lockService.tryBiometricUnlock(context);
 
-    if (!hasPassword) {
-      Navigator.of(context)
-          .pushNamedAndRemoveUntil('/master-password', (route) => false);
-      return;
-    }
-
-    final key = await _authService.unlockWithBiometrics();
-    if (!mounted) return;
-
-    if (key != null) {
+    if (success) {
+      if (!mounted) return;
       Navigator.of(context)
           .pushNamedAndRemoveUntil('/home', (route) => false);
+      return;
     } else {
-      Navigator.of(context)
-          .pushNamedAndRemoveUntil('/login', (route) => false);
+      if (!mounted) return;
+      Navigator.of(context).pushNamedAndRemoveUntil('/login', (r) => false);
     }
   }
+
+  // fallback
+  if (!mounted) return;
+  Navigator.of(context)
+      .pushNamedAndRemoveUntil('/login', (route) => false);
+}
+
 
   @override
   Widget build(BuildContext context) {

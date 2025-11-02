@@ -12,17 +12,19 @@ class SessionService {
   final ValueNotifier<bool> vaultNeedsRefresh = ValueNotifier(false);
 
   // Save decrypted master key in memory
-  void setMasterKey(Uint8List key) {
-    _masterKey = Uint8List.fromList(key);
-  }
+// session_service.dart
+
+void setMasterKey(Uint8List key) {
+  _masterKey = Uint8List.fromList(key);
+}
 
   // Retrieve master key if available
   Uint8List? get masterKey => _masterKey;
 
   // Clear session data (e.g. on logout or lock)
-  void clear() {
-    _masterKey = null;
-  }
+ void clear() {
+  _masterKey = null;
+}
 
   void notifyVaultUpdated() {
     vaultNeedsRefresh.value = !vaultNeedsRefresh.value;
